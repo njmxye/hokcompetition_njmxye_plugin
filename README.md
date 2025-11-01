@@ -1,19 +1,15 @@
 # 王者赛宝插件
 
-基于Yunzai-Bot的王者赛宝登录插件，使用Puppeteer实现自动登录功能。
+基于Yunzai-Bot的王者赛宝插件，提供创建比赛对接ffmpeg可以qq群在线看群友内战。随手给群友写的。
 
-## 功能
-
-- 自动访问王者赛宝登录页面
-- 自动点击QQ登录获取二维码
-- 等待用户扫码登录完成
-- 截图展示登录后页面状态
 
 ## 安装
-
-1. 将插件文件夹放入Yunzai-Bot的plugins目录
-2. 安装依赖：`pnpm install`
-3. 重启Yunzai-Bot
+```
+使用Github
+git clone --depth=1 https://github.com/njmxye/hokcompetition_njmxye_plugin.git ./plugins/hokcompetition_njmxye_plugin/
+安装依赖
+pnpm install
+```
 
 ## 使用方法
 
@@ -44,20 +40,6 @@ login:
 - puppeteer: 浏览器自动化
 - js-yaml: 配置文件解析
 - chalk: 控制台彩色输出
-
-## 开发
-
-插件结构：
-```
-hokcompetition_njmxye_plugin/
-├── apps/
-│   └── hok.js         # 主要功能实现
-├── config/
-│   └── config.yaml    # 配置文件
-├── index.js           # 插件入口
-├── package.json       # 项目配置
-└── README.md          # 说明文档
-```
 
 ## 作者
 
