@@ -116,7 +116,7 @@ export class WangZheSaiBao extends plugin {
         
         const qrScreenshot = await page.screenshot({ encoding: 'base64' });
         e.reply(segment.image(`base64://${qrScreenshot}`));
-        e.reply('请使用手机QQ扫描上方二维码登录，等待登录完成...');
+        e.reply('你先登录喵~扫这个二维码');
         
         try {
           await page.waitForNavigation({ 
@@ -213,8 +213,6 @@ accountsData._nextId = nextId + 1;
           
           await page.waitForTimeout(loginConfig.login_wait || 3000);
           
-          const loginScreenshot = await page.screenshot({ encoding: 'base64' });
-          e.reply(segment.image(`base64://${loginScreenshot}`));
           e.reply(`登录成功！账号信息已保存\n账号ID: ${accountId}`);
           
         } catch (navError) {
@@ -335,7 +333,7 @@ accountsData._nextId = nextId + 1;
       // 设置视口大小
       await page.setViewport({ 
         width: browserConfig.width || 1280, 
-        height: browserConfig.height || 720 
+        height: browserConfig.height || 720
       });
       
       // 先访问登录页面域名，确保cookies可以正确设置
@@ -372,7 +370,7 @@ accountsData._nextId = nextId + 1;
         }
         
         // 等待iframe内容加载
-        await frame.waitForTimeout(2000);
+        await frame.waitForTimeout(1500);
         
         // 等待并点击比赛赛制选项（在iframe内部）
         try {
@@ -422,14 +420,14 @@ accountsData._nextId = nextId + 1;
             }, matchFormat);
             
             // 等待页面响应
-            await frame.waitForTimeout(2000);
+        await frame.waitForTimeout(1500);
           }
         } catch (err) {
           // 静默处理错误
         }
         
-        // 等待加载完成
-        await frame.waitForTimeout(2000);
+        // 等待滚动完成
+        await frame.waitForTimeout(1500);
         
         // 等待并点击快速赛选项（在iframe内部）
         try {
@@ -456,7 +454,7 @@ accountsData._nextId = nextId + 1;
           });
           
           // 等待滚动完成和内容加载
-          await frame.waitForTimeout(2000);
+          await frame.waitForTimeout(1500);
           
           // 通过文本内容"快速赛"来定位元素
           await frame.waitForSelector('.tip-match-popup-press-wrap', { timeout: 10000 });
@@ -819,15 +817,21 @@ accountsData._nextId = nextId + 1;
             
             // 截图并回复
             try {
-              // 直接使用整个页面截图
-              const pageScreenshot = await page.screenshot({
-                type: 'jpeg',
-                quality: 80
-              });
-              e.reply(segment.image(pageScreenshot));
-            } catch (err) {
-              // 如果截图失败，静默处理
-            }
+                // 直接使用整个页面截图，只截取左36.3%
+                const pageScreenshot = await page.screenshot({
+                  type: 'jpeg',
+                  quality: 80,
+                  clip: {
+                    x: 0,
+                    y: 0,
+                    width: page.viewport().width * 0.363,  // 只截取左36.3%
+                    height: page.viewport().height
+                  }
+                });
+                e.reply(segment.image(pageScreenshot));
+              } catch (err) {
+                // 如果截图失败，静默处理
+              }
           }
         } catch (err) {
           // 静默处理错误
