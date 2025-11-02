@@ -13,3 +13,9 @@ login:
   screenshot: true   # 是否发送截图
   qr_timeout: 60000  # 等待扫码登录超时时间(毫秒)，默认60秒
   login_wait: 3000   # 登录成功后等待页面加载时间(毫秒)
+  save_cookies: true # 是否保存登录状态
+
+# 数据存储设置
+data:
+  save_account_info: true  # 是否保存账号信息
+  auto_cleanup_days: 30    # 账号信息自动清理天数
