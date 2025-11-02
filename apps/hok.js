@@ -295,6 +295,9 @@ accountsData._nextId = nextId + 1;
 
   async homePage(e) {
     try {
+      // 发送俏皮的开始消息
+      e.reply('🎮 正在创建比赛房间，请稍等一下喵~\n⏱️ 房间链接将在30秒内发送给你哦！\n💫 别催别催，马上就好啦~');
+      
       const browserConfig = config.browser || {};
       const userId = e.user_id;
       
@@ -369,7 +372,7 @@ accountsData._nextId = nextId + 1;
         }
         
         // 等待iframe内容加载
-        await frame.waitForTimeout(3000);
+        await frame.waitForTimeout(2000);
         
         // 等待并点击比赛赛制选项（在iframe内部）
         try {
@@ -419,14 +422,14 @@ accountsData._nextId = nextId + 1;
             }, matchFormat);
             
             // 等待页面响应
-            await frame.waitForTimeout(3000);
+            await frame.waitForTimeout(2000);
           }
         } catch (err) {
           // 静默处理错误
         }
         
         // 等待加载完成
-        await frame.waitForTimeout(3000);
+        await frame.waitForTimeout(2000);
         
         // 等待并点击快速赛选项（在iframe内部）
         try {
@@ -453,7 +456,7 @@ accountsData._nextId = nextId + 1;
           });
           
           // 等待滚动完成和内容加载
-          await frame.waitForTimeout(3000);
+          await frame.waitForTimeout(2000);
           
           // 通过文本内容"快速赛"来定位元素
           await frame.waitForSelector('.tip-match-popup-press-wrap', { timeout: 10000 });
@@ -720,20 +723,139 @@ accountsData._nextId = nextId + 1;
         // 等待页面加载完成
         await frame.waitForTimeout(3000);
         
+        // 点击关闭按钮（在iframe内部）
+        try {
+          // 通过class属性来定位关闭按钮
+          await frame.waitForSelector('div.press-popup__left', { timeout: 10000 });
+          const closeBtnClicked = await frame.evaluate(() => {
+            const closeBtnElement = document.querySelector('div.press-popup__left');
+            if (closeBtnElement) {
+              // 使用更可靠的点击方式，模拟真实用户点击
+              // 先聚焦元素
+              closeBtnElement.focus();
+              // 模拟鼠标按下
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              });
+              closeBtnElement.dispatchEvent(mouseDownEvent);
+              
+              // 模拟鼠标抬起
+              setTimeout(() => {
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window
+                });
+                closeBtnElement.dispatchEvent(mouseUpEvent);
+                
+                // 触发点击事件
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window
+                });
+                closeBtnElement.dispatchEvent(clickEvent);
+              }, 100);
+              
+              return true;
+            }
+            return false;
+          });
+          
+          if (closeBtnClicked) {
+            // 等待1秒
+            await frame.waitForTimeout(1000);
+          }
+        } catch (err) {
+          // 静默处理错误
+        }
+        
+        // 点击二维码元素（在iframe内部）
+        try {
+          // 通过class属性来定位二维码元素
+          await frame.waitForSelector('div.match-qr-code-tip', { timeout: 10000 });
+          const qrCodeClicked = await frame.evaluate(() => {
+            const qrCodeElement = document.querySelector('div.match-qr-code-tip');
+            if (qrCodeElement) {
+              // 使用更可靠的点击方式，模拟真实用户点击
+              // 先聚焦元素
+              qrCodeElement.focus();
+              // 模拟鼠标按下
+              const mouseDownEvent = new MouseEvent('mousedown', {
+                bubbles: true,
+                cancelable: true,
+                view: window
+              });
+              qrCodeElement.dispatchEvent(mouseDownEvent);
+              
+              // 模拟鼠标抬起
+              setTimeout(() => {
+                const mouseUpEvent = new MouseEvent('mouseup', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window
+                });
+                qrCodeElement.dispatchEvent(mouseUpEvent);
+                
+                // 触发点击事件
+                const clickEvent = new MouseEvent('click', {
+                  bubbles: true,
+                  cancelable: true,
+                  view: window
+                });
+                qrCodeElement.dispatchEvent(clickEvent);
+              }, 100);
+              
+              return true;
+            }
+            return false;
+          });
+          
+          if (qrCodeClicked) {
+            // 等待1秒
+            await frame.waitForTimeout(1000);
+            
+            // 截图并回复
+            try {
+              // 直接使用整个页面截图
+              const pageScreenshot = await page.screenshot({
+                type: 'jpeg',
+                quality: 80
+              });
+              e.reply(segment.image(pageScreenshot));
+            } catch (err) {
+              // 如果截图失败，静默处理
+            }
+          }
+        } catch (err) {
+          // 静默处理错误
+        }
+        
       } catch (err) {
         await browser.close();
         return;
       }
       
-      // 最终截图
-      const finalScreenshot = await page.screenshot({ encoding: 'base64' });
-      e.reply(segment.image(`base64://${finalScreenshot}`));
-      
       // 更新最后活跃时间
       accountsData[accountId].lastActive = new Date().toISOString();
       fs.writeFileSync(dataPath, JSON.stringify(accountsData, null, 2));
       
-      e.reply(`已访问比赛并创建比赛\n当前账号: ${account.qqName}(${account.qqId})`);
+      // 获取当前页面URL并回复
+      const currentUrl = page.url();
+      
+      // 提取URL中的path参数
+      const urlObj = new URL(currentUrl);
+      const pathParam = urlObj.searchParams.get('path');
+      
+      if (pathParam) {
+        // 对path参数进行URL解码
+        const decodedPath = decodeURIComponent(pathParam);
+        e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${decodedPath}\n🎉 祝你比赛愉快，取得好成绩哦！`);
+      } else {
+        e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${currentUrl}\n🎉 祝你比赛愉快，取得好成绩哦！`);
+      }
       
       // 关闭浏览器
       await browser.close();
