@@ -1,5 +1,3 @@
-# 王者赛宝插件配置文件
-
 # 浏览器设置
 browser:
   headless: true   # 是否使用无头模式，true为无头模式，false为可见模式
