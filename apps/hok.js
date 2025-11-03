@@ -12,13 +12,11 @@ const configPath = path.join(_path, '/plugins/hokcompetition_njmxye_plugin/confi
 const dataPath = path.join(_path, '/plugins/hokcompetition_njmxye_plugin/data/accounts.json');
 let config = {};
 
-// 确保数据目录存在
 const dataDir = path.join(_path, '/plugins/hokcompetition_njmxye_plugin/data');
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// 初始化账号数据
 let accountsData = {};
 try {
   if (fs.existsSync(dataPath)) {
@@ -126,20 +124,15 @@ export class WangZheSaiBao extends plugin {
           
           await page.waitForTimeout(3000);
           
-          // 获取登录后的用户信息和cookies
           const cookies = await page.cookies();
           
-          // 确保cookies有正确的域名和路径
           const processedCookies = cookies.map(cookie => {
-            // 如果没有域名，设置为当前域名
             if (!cookie.domain) {
               cookie.domain = '.qq.com';
             }
-            // 如果没有路径，设置为根路径
             if (!cookie.path) {
               cookie.path = '/';
             }
-            // 确保httpOnly和secure标志正确设置
             if (cookie.name.includes('S') || cookie.name.includes('token')) {
               cookie.httpOnly = true;
               cookie.secure = true;
@@ -148,7 +141,6 @@ export class WangZheSaiBao extends plugin {
           });
           
           const userInfo = await page.evaluate(() => {
-            // 尝试多种方式获取用户昵称
             const selectors = [
               '.user-name',
               '.nickname',
@@ -175,26 +167,21 @@ export class WangZheSaiBao extends plugin {
             };
           });
           
-          // 生成唯一ID
-          // 生成简单数字ID
 let nextId = accountsData._nextId || 1;
 const accountId = nextId.toString();
 accountsData._nextId = nextId + 1;
           
-          // 检查是否已有该QQ号的账号，如果有则删除旧的
             const existingAccountIds = Object.keys(accountsData).filter(id => 
               id !== '_nextId' && accountsData[id].qqId === userId
             );
             
             if (existingAccountIds.length > 0) {
-              // 删除旧账号
               for (const oldAccountId of existingAccountIds) {
                 delete accountsData[oldAccountId];
               }
               e.reply(`已替换旧的登录信息，之前登录的账号已被移除`);
             }
             
-            // 保存账号信息
             accountsData[accountId] = {
               qqId: userId,
               qqName: e.sender.card || e.sender.nickname,
@@ -203,7 +190,6 @@ accountsData._nextId = nextId + 1;
               lastActive: new Date().toISOString()
             };
           
-          // 保存到文件
           fs.writeFileSync(dataPath, JSON.stringify(accountsData, null, 2));
           
           await page.goto('https://h5.nes.smoba.qq.com/pvpesport.next.user/', {
@@ -232,36 +218,29 @@ accountsData._nextId = nextId + 1;
 
   async help(e) {
     const helpMessage = `
-王者赛宝插件使用说明：
+赛宝插件简单说明：
 
-命令列表：
-#赛宝登录 - 登录王者赛宝账号（适用于新用户或token过期用户）
-#赛宝账号 - 查看已保存的账号列表
-#比赛 - 访问比赛
+命令：
+#赛宝登录 - 登录王者赛宝账号
+#赛宝账号 - 查看已保存的账号
+#比赛 - 创建比赛房间
 
-功能说明：
-1. 自动账号管理：系统会自动识别您的QQ号，并匹配对应的赛宝账号
-2. 无需手动切换：使用任何命令时，系统会自动切换到您的账号
-3. 登录流程：#赛宝登录命令会引导您完成完整的登录流程
-4. 多用户支持：支持多个QQ用户同时使用，各自管理自己的账号
+小贴士：
+- 新用户或者token过期了用#赛宝登录
+- 系统会自动识别你的QQ号
+- 不用手动切换账号，系统会自动处理
+- 多个用户可以同时用，各用各的
 
-注意事项：
-- #赛宝登录适用于新用户或token过期的用户
-- 登录成功后，系统会自动保存您的账号信息
-- 如果您已有账号但token过期，请使用#赛宝登录重新登录
-- 如遇到问题，请联系管理员
+有问题找我喵~楠寻github@njmxye
     `;
     
     e.reply(helpMessage);
   }
 
-
-
   async accountList(e) {
     try {
       const userId = e.user_id;
       
-      // 获取当前用户的所有账号
       const userAccounts = Object.entries(accountsData).filter(([id, account]) => id !== '_nextId' && account.qqId === userId);
       
       if (userAccounts.length === 0) {
@@ -269,7 +248,6 @@ accountsData._nextId = nextId + 1;
         return;
       }
       
-      // 构建账号列表
       let listMsg = '账号列表：\n';
       userAccounts.forEach(([id, account], index) => {
         const loginTime = new Date(account.loginTime).toLocaleString();
@@ -288,32 +266,24 @@ accountsData._nextId = nextId + 1;
     }
   }
 
-
-
-
   async homePage(e) {
     try {
-      // 发送俏皮的开始消息
       e.reply('🎮 正在创建比赛房间，请稍等一下喵~\n⏱️ 房间链接将在30秒内发送给你哦！\n💫 别催别催，马上就好啦~');
       
       const browserConfig = config.browser || {};
       const userId = e.user_id;
       
-      // 检查是否有保存的账号信息
       const existingAccounts = Object.entries(accountsData).filter(([id, account]) => account.qqId === userId);
       
-      // 如果没有账号信息，自动调用登录
       if (existingAccounts.length === 0) {
         await this.login(e);
         return;
       }
       
-      // 使用最后活跃的账号
       const [accountId, account] = existingAccounts.sort((a, b) => 
         new Date(b[1].lastActive) - new Date(a[1].lastActive)
       )[0];
       
-      // 启动浏览器
       const browser = await puppeteer.launch({
         headless: browserConfig.headless !== undefined ? browserConfig.headless : false,
         args: [
@@ -327,54 +297,43 @@ accountsData._nextId = nextId + 1;
       
       const page = await browser.newPage();
       
-      // 设置用户代理
       await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
       
-      // 设置视口大小
       await page.setViewport({ 
         width: browserConfig.width || 1280, 
         height: browserConfig.height || 720
       });
       
-      // 先访问登录页面域名，确保cookies可以正确设置
       await page.goto('https://h5.nes.smoba.qq.com/', {
         waitUntil: 'networkidle2',
         timeout: 10000
       });
       
-      // 设置cookies，使用之前保存的登录状态
       await page.setCookie(...account.cookies);
       
-      // 先跳转到创建比赛页面
       try {
         await page.goto('https://h5.nes.smoba.qq.com/pvpesport.next.user/views/match-create/create/index?createType=1', {
           waitUntil: 'networkidle2',
           timeout: 15000
         });
         
-        // 等待页面完全加载
         await page.waitForTimeout(3000);
         
-        // 获取页面中的iframe
         const iframeElement = await page.waitForSelector('iframe.web-iframe', { timeout: 10000 });
         if (!iframeElement) {
           await browser.close();
           return;
         }
         
-        // 切换到iframe内部
         const frame = await iframeElement.contentFrame();
         if (!frame) {
           await browser.close();
           return;
         }
         
-        // 等待iframe内容加载
         await frame.waitForTimeout(1500);
         
-        // 等待并点击比赛赛制选项（在iframe内部）
         try {
-          // 通过文本内容"比赛赛制"来定位元素
           await frame.waitForSelector('div.info-normal-item', { timeout: 10000 });
           const matchFormat = await frame.evaluateHandle(() => {
             const items = document.querySelectorAll('div.info-normal-item');
@@ -388,11 +347,8 @@ accountsData._nextId = nextId + 1;
           });
           
           if (matchFormat) {
-            // 使用更可靠的点击方式，模拟真实用户点击
             await frame.evaluate((element) => {
-              // 先聚焦元素
               element.focus();
-              // 模拟鼠标按下
               const mouseDownEvent = new MouseEvent('mousedown', {
                 bubbles: true,
                 cancelable: true,
@@ -400,7 +356,6 @@ accountsData._nextId = nextId + 1;
               });
               element.dispatchEvent(mouseDownEvent);
               
-              // 模拟鼠标抬起
               setTimeout(() => {
                 const mouseUpEvent = new MouseEvent('mouseup', {
                   bubbles: true,
@@ -409,7 +364,6 @@ accountsData._nextId = nextId + 1;
                 });
                 element.dispatchEvent(mouseUpEvent);
                 
-                // 触发点击事件
                 const clickEvent = new MouseEvent('click', {
                   bubbles: true,
                   cancelable: true,
@@ -419,28 +373,20 @@ accountsData._nextId = nextId + 1;
               }, 100);
             }, matchFormat);
             
-            // 等待页面响应
         await frame.waitForTimeout(1500);
           }
         } catch (err) {
-          // 静默处理错误
         }
         
-        // 等待滚动完成
         await frame.waitForTimeout(1500);
         
-        // 等待并点击快速赛选项（在iframe内部）
         try {
-          // 先滚动列表到底部，确保快速赛选项可见
           await frame.evaluate(() => {
-            // 查找可滚动的容器，使用稳定的类名
             const scrollContainer = document.querySelector('.tip-match-popup-group-scroll');
             
             if (scrollContainer) {
-              // 滚动到底部
               scrollContainer.scrollTop = scrollContainer.scrollHeight;
               
-              // 模拟多次滚动，确保内容完全加载
               let scrollCount = 0;
               const scrollInterval = setInterval(() => {
                 scrollContainer.scrollTop = scrollContainer.scrollHeight;
@@ -453,25 +399,18 @@ accountsData._nextId = nextId + 1;
             }
           });
           
-          // 等待滚动完成和内容加载
           await frame.waitForTimeout(1500);
           
-          // 通过文本内容"快速赛"来定位元素
           await frame.waitForSelector('.tip-match-popup-press-wrap', { timeout: 10000 });
           const quickMatchClicked = await frame.evaluate(() => {
-            // 查找所有赛制选项
             const options = document.querySelectorAll('.tip-match-popup-press-wrap');
             for (const option of options) {
-              // 查找标题元素
               const titleElement = option.querySelector('.tip-match-type-name');
               if (titleElement && titleElement.textContent.includes('快速赛')) {
-                // 查找可点击的label元素
                 const labelElement = option.querySelector('.label');
                 if (labelElement) {
-                  // 先聚焦元素
                   labelElement.focus();
                   
-                  // 模拟鼠标按下
                   const mouseDownEvent = new MouseEvent('mousedown', {
                     bubbles: true,
                     cancelable: true,
@@ -479,7 +418,6 @@ accountsData._nextId = nextId + 1;
                   });
                   labelElement.dispatchEvent(mouseDownEvent);
                   
-                  // 模拟鼠标抬起
                   setTimeout(() => {
                     const mouseUpEvent = new MouseEvent('mouseup', {
                       bubbles: true,
@@ -488,7 +426,6 @@ accountsData._nextId = nextId + 1;
                     });
                     labelElement.dispatchEvent(mouseUpEvent);
                     
-                    // 触发点击事件
                     const clickEvent = new MouseEvent('click', {
                       bubbles: true,
                       cancelable: true,
@@ -497,13 +434,11 @@ accountsData._nextId = nextId + 1;
                     labelElement.dispatchEvent(clickEvent);
                   }, 100);
                   
-                  // 检查是否成功添加checked类
                   setTimeout(() => {
                     if (labelElement.classList.contains('checked')) {
                       console.log('快速赛选项已选中');
                     } else {
                       console.log('快速赛选项未选中，尝试直接点击');
-                      // 如果没有选中，尝试直接调用click方法
                       labelElement.click();
                     }
                   }, 500);
@@ -516,25 +451,18 @@ accountsData._nextId = nextId + 1;
           });
           
           if (quickMatchClicked) {
-            // 等待页面响应
           await frame.waitForTimeout(3000);
           }
         } catch (err) {
-          // 静默处理错误
         }
         
-        // 等待选择完成
         await frame.waitForTimeout(3000);
         
-        // 检查是否成功选择快速赛（在iframe内部）
         const isQuickMatchSelected = await frame.evaluate(() => {
-          // 查找所有赛制选项
           const options = document.querySelectorAll('.tip-match-popup-press-wrap');
           for (const option of options) {
-            // 查找标题元素
             const titleElement = option.querySelector('.tip-match-type-name');
             if (titleElement && titleElement.textContent.includes('快速赛')) {
-              // 检查是否有checked类
               const labelElement = option.querySelector('.label');
               return labelElement && labelElement.classList.contains('checked');
             }
@@ -543,22 +471,16 @@ accountsData._nextId = nextId + 1;
         });
         
         if (!isQuickMatchSelected) {
-          // 如果没有选中，再尝试点击一次
           try {
             const quickMatchClickedAgain = await frame.evaluate(() => {
-              // 查找所有赛制选项
               const options = document.querySelectorAll('.tip-match-popup-press-wrap');
               for (const option of options) {
-                // 查找标题元素
                 const titleElement = option.querySelector('.tip-match-type-name');
                 if (titleElement && titleElement.textContent.includes('快速赛')) {
-                  // 查找可点击的label元素
                   const labelElement = option.querySelector('.label');
                   if (labelElement) {
-                    // 先聚焦元素
                     labelElement.focus();
                     
-                    // 模拟鼠标按下
                     const mouseDownEvent = new MouseEvent('mousedown', {
                       bubbles: true,
                       cancelable: true,
@@ -566,7 +488,6 @@ accountsData._nextId = nextId + 1;
                     });
                     labelElement.dispatchEvent(mouseDownEvent);
                     
-                    // 模拟鼠标抬起
                     setTimeout(() => {
                       const mouseUpEvent = new MouseEvent('mouseup', {
                         bubbles: true,
@@ -575,7 +496,6 @@ accountsData._nextId = nextId + 1;
                       });
                       labelElement.dispatchEvent(mouseUpEvent);
                       
-                      // 触发点击事件
                       const clickEvent = new MouseEvent('click', {
                         bubbles: true,
                         cancelable: true,
@@ -584,13 +504,11 @@ accountsData._nextId = nextId + 1;
                       labelElement.dispatchEvent(clickEvent);
                     }, 100);
                     
-                    // 检查是否成功添加checked类
                     setTimeout(() => {
                       if (labelElement.classList.contains('checked')) {
                         console.log('快速赛选项已选中');
                       } else {
                         console.log('快速赛选项未选中，尝试直接点击');
-                        // 如果没有选中，尝试直接调用click方法
                         labelElement.click();
                       }
                     }, 500);
@@ -602,14 +520,11 @@ accountsData._nextId = nextId + 1;
               return false;
             });
           } catch (err) {
-            // 静默处理错误
           }
           await frame.waitForTimeout(3000);
         }
         
-        // 等待并点击确定按钮（在iframe内部）
         try {
-          // 通过文本内容"确定"来定位元素
           await frame.waitForSelector('div.btn-primary', { timeout: 10000 });
           const confirmBtn = await frame.evaluateHandle(() => {
             const buttons = document.querySelectorAll('div.btn-primary');
@@ -623,11 +538,8 @@ accountsData._nextId = nextId + 1;
           });
           
           if (confirmBtn) {
-            // 使用更可靠的点击方式，模拟真实用户点击
             await frame.evaluate((element) => {
-              // 先聚焦元素
               element.focus();
-              // 模拟鼠标按下
               const mouseDownEvent = new MouseEvent('mousedown', {
                 bubbles: true,
                 cancelable: true,
@@ -635,7 +547,6 @@ accountsData._nextId = nextId + 1;
               });
               element.dispatchEvent(mouseDownEvent);
               
-              // 模拟鼠标抬起
               setTimeout(() => {
                 const mouseUpEvent = new MouseEvent('mouseup', {
                   bubbles: true,
@@ -644,7 +555,6 @@ accountsData._nextId = nextId + 1;
                 });
                 element.dispatchEvent(mouseUpEvent);
                 
-                // 触发点击事件
                 const clickEvent = new MouseEvent('click', {
                   bubbles: true,
                   cancelable: true,
@@ -654,19 +564,14 @@ accountsData._nextId = nextId + 1;
               }, 100);
             }, confirmBtn);
             
-            // 等待页面响应
           await frame.waitForTimeout(3000);
           }
         } catch (err) {
-          // 静默处理错误
         }
         
-        // 等待页面响应
         await frame.waitForTimeout(3000);
         
-        // 等待并点击创建比赛按钮（在iframe内部）
         try {
-          // 通过文本内容"创建比赛"来定位元素
           await frame.waitForSelector('uni-button', { timeout: 10000 });
           const createMatchBtn = await frame.evaluateHandle(() => {
             const buttons = document.querySelectorAll('uni-button');
@@ -680,11 +585,8 @@ accountsData._nextId = nextId + 1;
           });
           
           if (createMatchBtn) {
-            // 使用更可靠的点击方式，模拟真实用户点击
             await frame.evaluate((element) => {
-              // 先聚焦元素
               element.focus();
-              // 模拟鼠标按下
               const mouseDownEvent = new MouseEvent('mousedown', {
                 bubbles: true,
                 cancelable: true,
@@ -692,7 +594,6 @@ accountsData._nextId = nextId + 1;
               });
               element.dispatchEvent(mouseDownEvent);
               
-              // 模拟鼠标抬起
               setTimeout(() => {
                 const mouseUpEvent = new MouseEvent('mouseup', {
                   bubbles: true,
@@ -701,7 +602,6 @@ accountsData._nextId = nextId + 1;
                 });
                 element.dispatchEvent(mouseUpEvent);
                 
-                // 触发点击事件
                 const clickEvent = new MouseEvent('click', {
                   bubbles: true,
                   cancelable: true,
@@ -711,27 +611,19 @@ accountsData._nextId = nextId + 1;
               }, 100);
             }, createMatchBtn);
             
-            // 等待页面响应
           await frame.waitForTimeout(3000);
           }
         } catch (err) {
-          // 静默处理错误
         }
         
-        // 等待页面加载完成
         await frame.waitForTimeout(3000);
         
-        // 点击关闭按钮（在iframe内部）
         try {
-          // 通过class属性来定位关闭按钮
           await frame.waitForSelector('div.press-popup__left', { timeout: 10000 });
           const closeBtnClicked = await frame.evaluate(() => {
             const closeBtnElement = document.querySelector('div.press-popup__left');
             if (closeBtnElement) {
-              // 使用更可靠的点击方式，模拟真实用户点击
-              // 先聚焦元素
               closeBtnElement.focus();
-              // 模拟鼠标按下
               const mouseDownEvent = new MouseEvent('mousedown', {
                 bubbles: true,
                 cancelable: true,
@@ -739,7 +631,6 @@ accountsData._nextId = nextId + 1;
               });
               closeBtnElement.dispatchEvent(mouseDownEvent);
               
-              // 模拟鼠标抬起
               setTimeout(() => {
                 const mouseUpEvent = new MouseEvent('mouseup', {
                   bubbles: true,
@@ -748,7 +639,6 @@ accountsData._nextId = nextId + 1;
                 });
                 closeBtnElement.dispatchEvent(mouseUpEvent);
                 
-                // 触发点击事件
                 const clickEvent = new MouseEvent('click', {
                   bubbles: true,
                   cancelable: true,
@@ -763,24 +653,17 @@ accountsData._nextId = nextId + 1;
           });
           
           if (closeBtnClicked) {
-            // 等待1秒
             await frame.waitForTimeout(1000);
           }
         } catch (err) {
-          // 静默处理错误
         }
         
-        // 点击二维码元素（在iframe内部）
         try {
-          // 通过class属性来定位二维码元素
           await frame.waitForSelector('div.match-qr-code-tip', { timeout: 10000 });
           const qrCodeClicked = await frame.evaluate(() => {
             const qrCodeElement = document.querySelector('div.match-qr-code-tip');
             if (qrCodeElement) {
-              // 使用更可靠的点击方式，模拟真实用户点击
-              // 先聚焦元素
               qrCodeElement.focus();
-              // 模拟鼠标按下
               const mouseDownEvent = new MouseEvent('mousedown', {
                 bubbles: true,
                 cancelable: true,
@@ -788,7 +671,6 @@ accountsData._nextId = nextId + 1;
               });
               qrCodeElement.dispatchEvent(mouseDownEvent);
               
-              // 模拟鼠标抬起
               setTimeout(() => {
                 const mouseUpEvent = new MouseEvent('mouseup', {
                   bubbles: true,
@@ -797,7 +679,6 @@ accountsData._nextId = nextId + 1;
                 });
                 qrCodeElement.dispatchEvent(mouseUpEvent);
                 
-                // 触发点击事件
                 const clickEvent = new MouseEvent('click', {
                   bubbles: true,
                   cancelable: true,
@@ -812,29 +693,24 @@ accountsData._nextId = nextId + 1;
           });
           
           if (qrCodeClicked) {
-            // 等待1秒
             await frame.waitForTimeout(1000);
             
-            // 截图并回复
             try {
-                // 直接使用整个页面截图，只截取左36.3%
                 const pageScreenshot = await page.screenshot({
                   type: 'jpeg',
                   quality: 80,
                   clip: {
                     x: 0,
                     y: 0,
-                    width: page.viewport().width * 0.363,  // 只截取左36.3%
+                    width: page.viewport().width * 0.363,
                     height: page.viewport().height
                   }
                 });
                 e.reply(segment.image(pageScreenshot));
               } catch (err) {
-                // 如果截图失败，静默处理
               }
           }
         } catch (err) {
-          // 静默处理错误
         }
         
       } catch (err) {
@@ -842,26 +718,21 @@ accountsData._nextId = nextId + 1;
         return;
       }
       
-      // 更新最后活跃时间
       accountsData[accountId].lastActive = new Date().toISOString();
       fs.writeFileSync(dataPath, JSON.stringify(accountsData, null, 2));
       
-      // 获取当前页面URL并回复
       const currentUrl = page.url();
       
-      // 提取URL中的path参数
       const urlObj = new URL(currentUrl);
       const pathParam = urlObj.searchParams.get('path');
       
       if (pathParam) {
-        // 对path参数进行URL解码
         const decodedPath = decodeURIComponent(pathParam);
         e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${decodedPath}\n🎉 祝你比赛愉快，取得好成绩哦！`);
       } else {
         e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${currentUrl}\n🎉 祝你比赛愉快，取得好成绩哦！`);
       }
       
-      // 关闭浏览器
       await browser.close();
       
     } catch (error) {

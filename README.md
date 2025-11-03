@@ -1,85 +1,176 @@
-# 王者赛宝插件
+<div align="center">
 
-基于Yunzai-Bot的王者赛宝插件，提供创建比赛对接ffmpeg可以qq群在线看群友内战。随手给群友写的。
+# 🏆 *HOK* <a href="https://njmxye.github.io/"><img src="./resources/img/logo.png" alt="Logo" height="180" align="middle"></a>
+<br>
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) &nbsp; [![Node.js Version](https://img.shields.io/badge/node-%3E%3D16.0.0-brightgreen)](https://nodejs.org/) &nbsp; [![Yunzai-Bot](https://img.shields.io/badge/Yunzai--Bot-Compatible-blue)](https://github.com/yoimiya-kokomi/Yunzai-Bot)
+
+*适用于 Yunzai-Bot 的王者荣耀赛宝插件，轻松创建和管理比赛房间*
+
+</div>
+
+## 📋 目录
+
+- [🚀 快速开始](#-快速开始)
+- [📖 使用方法](#-使用方法)
+- [⚙️ 配置说明](#️-配置说明)
+- [💾 数据存储](#-数据存储)
+- [🛠️ 技术栈](#️-技术栈)
+- [🤝 贡献指南](#-贡献指南)
+- [✨ 贡献成员](#-贡献成员)
+- [📜 更新日志](#-更新日志)
 
 
-## 安装
-```
-使用Github
-git clone --depth=1 https://github.com/njmxye/hokcompetition_njmxye_plugin.git ./plugins/hokcompetition_njmxye_plugin/
-安装依赖
+## 🚀 快速开始
+
+### 📥 安装方式
+
+<details>
+  <summary>Git 克隆安装（推荐）</summary>
+
+```bash
+# 进入 Yunzai-Bot 插件目录
+cd Yunzai-Bot/plugins/
+
+# 克隆本仓库
+git clone https://github.com/yourusername/hokcompetition_njmxye_plugin.git
+
+# 安装依赖
+cd hokcompetition_njmxye_plugin
 pnpm install
 ```
 
-## 使用方法
+</details>
 
-- `#赛宝登录` - 启动王者赛宝登录流程
-- `#比赛` - 使用最近活跃的账号访问王者赛宝主页
-- `#比赛 [ID]` - 使用指定ID的账号访问王者赛宝主页
-- `#赛宝账号列表` - 查看已保存的账号信息
-- `#赛宝切换账号 [ID]` - 切换到指定ID的账号
-- `#赛宝删除账号 [ID]` - 删除指定ID的账号
-- `#赛宝帮助` - 查看插件帮助信息
+<details>
+  <summary>手动下载安装</summary>
 
-## 功能
+1. 下载本仓库的 ZIP 压缩包并解压
+2. 将解压后的文件夹放入 `Yunzai-Bot/plugins/` 目录
+3. 重命名为 `hokcompetition_njmxye_plugin`
+4. 进入插件目录安装依赖：
+   ```bash
+   cd Yunzai-Bot/plugins/hokcompetition_njmxye_plugin
+   pnpm install
+   ```
 
-- 自动访问王者赛宝登录页面
-- 自动点击QQ登录获取二维码
-- 等待用户扫码登录完成
-- 截图展示登录后页面状态
-- 保存登录状态和账号信息
-- 使用ID序号管理多个登录账号
-- 使用用户QQ号和昵称标注账号
-- 使用保存的token直接访问主页
-- 支持通过ID切换不同账号访问主页
+</details>
 
-## 配置
+### 🔧 基本配置
 
-修改`config/config.yaml`文件调整插件设置：
+1. 复制 `config/config.yaml.example` 为 `config/config.yaml`
+2. 根据需要修改配置文件（详见[配置说明](#️-配置说明)）
+3. 重启 Yunzai-Bot 或使用插件管理命令重载插件
+
+## 📖 使用方法
+
+| 命令 | 功能描述 | 示例 |
+|------|---------|------|
+| `#赛宝登录` | 登录王者营地账号 | `#赛宝登录` |
+| `#赛宝账号` | 查看已登录账号列表 | `#赛宝账号` |
+| `#比赛` | 创建王者荣耀5v5快速赛并返回比赛截图 | `#比赛` |
+
+<details>
+  <summary>📸 功能截图示例</summary>
+
+  <!-- 这里可以添加实际的功能截图 -->
+  <p>📸 功能截图展示区域（可添加实际使用截图）</p>
+
+</details>
+
+## ⚙️ 配置说明
+
+插件配置文件位于 `config/config.yaml`，以下是主要配置项：
 
 ```yaml
 # 浏览器设置
 browser:
-  headless: true  # 无头模式
-  width: 1280     # 浏览器宽度
-  height: 720     # 浏览器高度
-  timeout: 30000  # 页面加载超时时间(ms)
+  headless: false        # 是否无头模式运行
+  devtools: false        # 是否开启开发者工具
+  slowMo: 100           # 操作延迟（毫秒）
 
 # 登录设置
 login:
-  wait_time: 3000    # 页面加载等待时间(ms)
-  qr_timeout: 60000  # 扫码登录超时时间(ms)
-  login_wait: 3000   # 登录成功后等待时间(ms)
-  save_cookies: true # 是否保存登录状态
+  timeout: 60000        # 登录超时时间（毫秒）
+  retry: 3              # 登录失败重试次数
 
-# 数据存储设置
+# 数据设置
 data:
-  save_account_info: true  # 是否保存账号信息
-  auto_cleanup_days: 30    # 账号信息自动清理天数
+  accountsFile: "accounts.json"  # 账号数据文件
+  screenshotDir: "./screenshots"  # 截图保存目录
 ```
 
-## 数据存储
+<details>
+  <summary>🔧 高级配置选项</summary>
 
-插件会在 `data/accounts.json` 文件中保存以下信息：
-- 用户昵称
-- 登录cookies
-- 登录时间
-- 最后活跃时间
+```yaml
+# 比赛设置
+match:
+  autoRefresh: true     # 是否自动刷新比赛状态
+  refreshInterval: 30000  # 刷新间隔（毫秒）
+  createTimeout: 120000   # 创建比赛超时时间（毫秒）
 
-每个用户的信息独立存储，支持多用户使用。
+# 通知设置
+notification:
+  enable: true          # 是否启用通知
+  onSuccess: true       # 成功时是否通知
+  onFailure: true       # 失败时是否通知
+```
 
-## 依赖
+</details>
 
-- puppeteer: 浏览器自动化
-- js-yaml: 配置文件解析
-- chalk: 控制台彩色输出
+## 💾 数据存储
 
-## 作者
+插件使用 `accounts.json` 文件存储账号信息，格式如下：
 
-- njmxye
-- GitHub: https://github.com/njmxye
-- QQ交流群: 348582328
+```json
+{
+  "accounts": [
+    {
+      "id": "account_id",
+      "name": "用户昵称",
+      "cookies": "王者营地账号的登录cookies",
+      "lastLogin": "最后登录时间"
+    }
+  ]
+}
+```
 
-## 许可证
+> ⚠️ **注意**：请妥善保管 `accounts.json` 文件，避免泄露个人信息！
 
-MIT License
+## 🛠️ 技术栈
+
+- **[Node.js](https://nodejs.org/)** - 运行环境
+- **[Puppeteer](https://pptr.dev/)** - 自动化浏览器控制
+- **[Yunzai-Bot](https://github.com/yoimiya-kokomi/Yunzai-Bot)** - 机器人框架
+- **[js-yaml](https://github.com/nodeca/js-yaml)** - YAML配置文件解析
+- **[chalk](https://github.com/chalk/chalk)** - 终端颜色输出
+
+
+## ✨ 贡献成员
+
+![贡献成员](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)
+
+<a href="https://github.com/njmxye/hokcompetition_njmxye_plugin/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=njmxye/hokcompetition_njmxye_plugin" />
+</a>
+
+![Alt](https://repobeats.axiom.co/api/embed/07982936c0079abb52b39eb66cff4e5fc4676da0.svg "Repobeats analytics image")
+
+## 📜 更新日志
+
+### v1.0.0
+- ✨ 初始版本发布
+- 🎮 支持自动登录王者营地
+- 🏆 支持创建王者荣耀比赛
+- 👥 支持多账号管理
+
+---
+
+<div align="center">
+
+**[⬆ 回到顶部](#-王者赛宝插件)**
+
+Made with ❤️ by [njmxye](https://github.com/njmxye)
+
+</div>
