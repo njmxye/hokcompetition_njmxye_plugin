@@ -179,7 +179,7 @@ accountsData._nextId = nextId + 1;
               for (const oldAccountId of existingAccountIds) {
                 delete accountsData[oldAccountId];
               }
-              e.reply(`已替换旧的登录信息，之前登录的账号已被移除`);
+              e.reply(`正在替换旧的登录信息！`);
             }
             
             accountsData[accountId] = {
@@ -224,6 +224,7 @@ accountsData._nextId = nextId + 1;
 #赛宝登录 - 登录王者赛宝账号
 #赛宝账号 - 查看已保存的账号
 #比赛 - 创建比赛房间
+#赛宝帮助 - 查看帮助信息
 
 小贴士：
 - 新用户或者token过期了用#赛宝登录
@@ -722,15 +723,24 @@ accountsData._nextId = nextId + 1;
       fs.writeFileSync(dataPath, JSON.stringify(accountsData, null, 2));
       
       const currentUrl = page.url();
-      
       const urlObj = new URL(currentUrl);
       const pathParam = urlObj.searchParams.get('path');
       
-      if (pathParam) {
-        const decodedPath = decodeURIComponent(pathParam);
-        e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${decodedPath}\n🎉 祝你比赛愉快，取得好成绩哦！`);
+      if (pathParam && pathParam !== 'https://h5.nes.smoba.qq.com/pvpesport.next.user/views/match-create/create/index?createType=1') {
+        e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${pathParam}\n🎉 祝你力压群雄，取得好成绩哦！`);
       } else {
-        e.reply(`🏆 比赛房间创建成功啦！\n🔗 点击这里或者扫描二维码进入比赛喵~\n${currentUrl}\n🎉 祝你比赛愉快，取得好成绩哦！`);
+        e.reply(`🆘 比赛创建失败了！\n🤖 触发了腾讯风控验证码！\n💡 据我所知动态风控过段时间会自动解除，你可以等待十分钟。\n🤓🤓🤓如果你着急的话，点击链接手动建房${pathParam}\n🔄 `);
+        const pageScreenshot1 = await page.screenshot({
+            type: 'jpeg',
+            quality: 80,
+            clip: {
+                x: 0,
+                y: 0,
+                width: page.viewport().width * 0.363,
+                height: page.viewport().height
+            }
+        });
+        e.reply(segment.image(pageScreenshot1));
       }
       
       await browser.close();
