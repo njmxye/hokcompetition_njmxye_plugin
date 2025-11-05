@@ -58,6 +58,10 @@ export class WangZheSaiBao extends plugin {
         {
           reg: '^#比赛$',
           fnc: 'homePage'
+        },
+        {
+          reg: '^#比赛直播启动',
+          fnc: 'getLiveLink'
         }
       ]
     })
@@ -224,6 +228,7 @@ accountsData._nextId = nextId + 1;
 #赛宝登录 - 登录王者赛宝账号
 #赛宝账号 - 查看已保存的账号
 #比赛 - 创建比赛房间
+#比赛直播启动 [childid] - 获取比赛直播链接并启动推流
 #赛宝帮助 - 查看帮助信息
 
 小贴士：
@@ -231,6 +236,8 @@ accountsData._nextId = nextId + 1;
 - 系统会自动识别你的QQ号
 - 不用手动切换账号，系统会自动处理
 - 多个用户可以同时用，各用各的
+- 使用#比赛直播启动时需要提供childid参数，例如：#比赛直播启动 72348778
+- #比赛直播启动会自动获取直播链接并启动推流流程，只需输入直播间地址即可
 
 有问题找我喵~楠寻github@njmxye
     `;
@@ -748,6 +755,154 @@ accountsData._nextId = nextId + 1;
     } catch (error) {
       logger.error(`比赛访问错误: ${error}`);
       e.reply(`访问主页失败: ${error.message}`);
+    }
+  }
+
+  async getLiveLink(e) {
+    try {
+      // 提取childid参数
+      const message = e.msg || e.message || '';
+      const childIdMatch = message.match(/^#比赛直播启动\s*(\d+)/);
+      
+      if (!childIdMatch) {
+        e.reply('请提供正确的childid参数，例如：#比赛直播启动 72348778');
+        return;
+      }
+      
+      const childId = childIdMatch[1];
+      const targetUrl = `https://h5.nes.smoba.qq.com/pvpesport.next.user/views/battle-room/room-quick?childid=${childId}`;
+      
+      e.reply(`🔍 正在获取比赛 ${childId} 的直播链接，请稍等...`);
+      
+      const browserConfig = config.browser || {};
+      const userId = e.user_id;
+      
+      // 检查用户是否有已保存的账号
+      const existingAccounts = Object.entries(accountsData).filter(([id, account]) => account.qqId === userId);
+      
+      if (existingAccounts.length === 0) {
+        e.reply('未找到已登录的账号，请先使用 #赛宝登录 命令登录');
+        return;
+      }
+      
+      // 获取最近活跃的账号
+      const [accountId, account] = existingAccounts.sort((a, b) => 
+        new Date(b[1].lastActive) - new Date(a[1].lastActive)
+      )[0];
+      
+      // 启动无头浏览器
+      const browser = await puppeteer.launch({
+        headless: true, // 使用无头模式 
+        args: [
+          '--no-sandbox', 
+          '--disable-setuid-sandbox',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-web-security',
+          '--disable-features=VizDisplayCompositor'
+        ]
+      });
+      
+      const page = await browser.newPage();
+      
+      // 设置用户代理
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      
+      await page.setViewport({ 
+        width: browserConfig.width || 1280, 
+        height: browserConfig.height || 720
+      });
+      
+      // 设置请求拦截器，监控网络请求
+      let foundLiveLink = null;
+      
+      await page.setRequestInterception(true);
+      page.on('request', request => {
+        request.continue();
+      });
+      
+      page.on('response', response => {
+        const url = response.url();
+        
+        // 检查是否是我们需要的API请求
+        if (url.includes('api.nes.smoba.qq.com') && url.includes('QueryRoomInfo')) {
+          response.text().then(text => {
+            try {
+              const data = JSON.parse(text);
+              
+              // 检查响应数据结构是否符合预期
+              if (data && data.battle && 
+                  data.battle.dynamic_info && 
+                  data.battle.dynamic_info.live_info && 
+                  data.battle.dynamic_info.live_info.ai_live_info && 
+                  data.battle.dynamic_info.live_info.ai_live_info.ai_live_broadcast_rtmp) {
+                
+                // 提取直播链接
+                foundLiveLink = data.battle.dynamic_info.live_info.ai_live_info.ai_live_broadcast_rtmp;
+                logger.info(`找到直播链接: ${foundLiveLink}`);
+              }
+            } catch (e) {
+              // 忽略JSON解析错误
+            }
+          }).catch(err => {
+            // 忽略错误
+          });
+        }
+      });
+      
+      // 先访问主页
+      await page.goto('https://h5.nes.smoba.qq.com/', {
+        waitUntil: 'networkidle2',
+        timeout: 10000
+      });
+      
+      // 设置cookies
+      await page.setCookie(...account.cookies);
+      
+      // 访问目标URL
+      await page.goto(targetUrl, {
+        waitUntil: 'networkidle2',
+        timeout: 15000
+      });
+      
+      // 等待5秒，让页面完全加载并发送所有网络请求
+      await page.waitForTimeout(5000);
+      
+      // 检查是否找到了直播链接
+      if (foundLiveLink) {
+        e.reply(`🎉 成功获取到比赛 ${childId} 的直播链接！\n📺 直播地址：${foundLiveLink}`);
+        
+        // 更新账号最后活跃时间
+        accountsData[accountId].lastActive = new Date().toISOString();
+        fs.writeFileSync(dataPath, JSON.stringify(accountsData, null, 2));
+        
+        // 调用FFmpeg直播插件，自动设置比赛流地址
+        e.reply(`🚀 正在启动直播推流流程...`);
+        
+        // 直接调用startStreamFlow方法，传入比赛流地址
+        try {
+          // 导入FFmpeg直播插件模块
+          const liveStreamModule = await import('./ffmpeglive.js');
+          const { LiveStreamPlugin } = liveStreamModule;
+          
+          // 创建FFmpeg插件实例
+          const livePlugin = new LiveStreamPlugin();
+          
+          // 直接调用startStreamFlow方法，传入比赛流地址
+          await livePlugin.startStreamFlow(e, foundLiveLink);
+          
+        } catch (err) {
+          logger.error(`调用FFmpeg直播插件错误: ${err}`);
+          e.reply(`⚠️ 启动直播推流时发生错误，请手动使用#开始直播命令`);
+        }
+      } else {
+        e.reply(`❌ 未能获取到比赛 ${childId} 的直播链接\n🔍 可能原因：\n1. 比赛尚未开始或已结束\n2. 该比赛没有开启直播功能\n3. 账号权限不足`);
+      }
+      
+      await browser.close();
+      
+    } catch (error) {
+      logger.error(`获取直播链接错误: ${error}`);
+      e.reply(`获取直播链接时发生错误: ${error.message}`);
     }
   }
 }
